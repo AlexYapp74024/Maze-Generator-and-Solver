@@ -1,6 +1,6 @@
 package view
 
-import app.MazeGenerator
+import app.RandomizeDFS
 import app.Styles
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.ToggleGroup
@@ -12,7 +12,6 @@ class MainView : View("Hello TornadoFX") {
     val colProperty = SimpleIntegerProperty(5)
     val displayGrid = DisplayGrid(this)
     val toggleGroup = ToggleGroup()
-    private val solver = MazeGenerator(this)
 
     override val root = borderpane {
         center = stackpane {
@@ -20,7 +19,6 @@ class MainView : View("Hello TornadoFX") {
             displayGrid.widthProperty().bind(widthProperty())
             displayGrid.heightProperty().bind(heightProperty())
         }
-
 
         right = vbox {
             addClass(Styles.boxSpacing)
@@ -43,7 +41,8 @@ class MainView : View("Hello TornadoFX") {
 
             button("Generate") {
                 action {
-                    solver.solve()
+                    displayGrid.resize()
+                    RandomizeDFS(this@MainView).generate()
                 }
             }
         }

@@ -1,55 +1,82 @@
 package app
 
-import javafx.scene.control.ToggleButton
-import org.jpl7.Integer
-import org.jpl7.Query
-import org.jpl7.Term
-import tornadofx.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import view.MainView
-import java.io.File
+import java.util.*
 
-class MazeGenerator(private val mainView: MainView) : PrologSolver() {
-    override val file = File("mazeGenerator.pl")
-    override var tempFile = File("maze.txt")
+abstract class MazeGenerator(private val mainView: MainView) {
+    protected val grid = mainView.displayGrid
 
-    private val rows by mainView.rowProperty
-    private val cols by mainView.colProperty
+    companion object {
 
-    private val grid = mainView.displayGrid
-    private fun mode(): String {
-        mainView.toggleGroup.selectedToggle?.let {
-            return@let (it as ToggleButton).text
+        enum class GenerationType(val str: String) {
+            RandomizeDFS("Randomized Dfs")
         }
-        return "randomize_dfs"
+
+        fun createGenerator(type: String) {
+            GenerationType.valueOf(type)
+        }
     }
 
-    override var query = defaultQuery()
-    override fun defaultQuery(): Query {
-        val q1 = Query(
-            "make_maze",
-            arrayOf(
-                Integer(rows.toLong()),
-                Integer(cols.toLong()),
-                Term.textToTerm(mode()),
-                Term.textToTerm("_")
-            )
-        )
-        return Query("once(${q1.toString()})")
+    protected fun neighbours(index: Int): ArrayList<Int> {
+        val p = grid.indexToXY(index)
+        val out = arrayListOf<Int>()
+
+        if (p.x - 2 >= 0)
+            out.add(grid.xyToIndex(p.x - 2, p.y))
+        if (p.x + 2 < grid.cols!!)
+            out.add(grid.xyToIndex(p.x + 2, p.y))
+        if (p.y - 2 >= 0)
+            out.add(grid.xyToIndex(p.x, p.y - 2))
+        if (p.y + 2 < grid.rows!!)
+            out.add(grid.xyToIndex(p.x, p.y + 2))
+
+        return out
     }
 
-    init {
-        mainView.rowProperty.onChange { resetQuery() }
-        mainView.colProperty.onChange { resetQuery() }
-        Query.hasSolution("['${file}']")
+    protected fun connect(i1: Int, i2: Int) {
+        val p1 = grid.indexToXY(i1)
+        val p2 = grid.indexToXY(i2)
+
+        grid.animate(p1.y, p1.x, "CLEAR")
+        grid.animate((p1.y + p2.y) / 2, (p1.x + p2.x) / 2, "CLEAR")
+        grid.animate(p2.y, p2.x, "CLEAR")
     }
 
-    private fun resetQuery() {
-        query = defaultQuery()
-    }
+    abstract fun generate()
+}
 
-    override fun parseLine(line: String) {
-        val args = line.split(" ")
-        if (args.size == 3)
-            grid.animate(args[0].toInt(), args[1].toInt(), args[2].uppercase())
+class RandomizeDFS(mainView: MainView) : MazeGenerator(mainView) {
+
+    private val stack = Stack<Int>()
+    private val visited = arrayListOf(0)
+    override fun generate() {
+        CoroutineScope(Dispatchers.IO).launch {
+            stack.push(0)
+
+            while (!stack.empty()) {
+                val current = stack.pop()
+                val neighbour = neighbours(current)
+
+                neighbour.removeIf { visited.contains(it) }
+                if (neighbour.isEmpty()) continue
+
+                stack.push(current)
+                val next = neighbour.random()
+
+                stack.push(next)
+                visited.add(next)
+
+                connect(current, next)
+            }
+        }
+    }
+}
+
+class RandomizePrims(mainView: MainView) : MazeGenerator(mainView) {
+    override fun generate() {
+
     }
 }

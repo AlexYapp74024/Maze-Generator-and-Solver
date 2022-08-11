@@ -6,8 +6,8 @@ import tornadofx.*
 
 class DisplayGrid(view: MainView) : Canvas() {
 
-    private val rows by view.rowProperty.objectBinding { it!!.toInt() * 2 - 1 }
-    private val cols by view.colProperty.objectBinding { it!!.toInt() * 2 - 1 }
+    val rows by view.rowProperty.objectBinding { it!!.toInt() * 2 - 1 }
+    val cols by view.colProperty.objectBinding { it!!.toInt() * 2 - 1 }
     private val spacing = 1.0
 
     private var cells = mutableListOf<Cell>()
@@ -33,7 +33,7 @@ class DisplayGrid(view: MainView) : Canvas() {
     override fun prefWidth(width: Double): Double = width
 
     private fun toggleCell(r: Int, c: Int) {
-        val index = index(r, c)
+        val index = xyToIndex(r, c)
         val cell = cells[index]
         cell.state = if (cell.state == Cell.State.CLEAR) {
             Cell.State.WALL
@@ -50,7 +50,7 @@ class DisplayGrid(view: MainView) : Canvas() {
             val x = r * w + spacing
             val y = c * h + spacing
 
-            fill = Cell.State.from_String(state).color()
+            fill = Cell.State.valueOf(state).color
             fillRect(x, y, w - 2 * spacing, h - 2 * spacing)
         }
     }
@@ -66,15 +66,21 @@ class DisplayGrid(view: MainView) : Canvas() {
                 val x = index % cols!! * w + spacing
                 val y = index / cols!! * h + spacing
 
-                fill = cell.state.color()
+                fill = cell.state.color
                 fillRect(x, y, w - 2 * spacing, h - 2 * spacing)
             }
         }
     }
 
-    private fun index(r: Int, c: Int) = r * cols!! + c
+    class Point(val x: Int, val y: Int)
 
-    private fun resize() {
+    fun xyToIndex(r: Int, c: Int) = r * cols!! + c
+    fun indexToXY(index: Int) = Point(
+        index / cols!!,
+        index % cols!!
+    )
+
+    fun resize() {
         cells = mutableListOf()
         repeat(rows!! * cols!!) {
             cells.add(Cell())
@@ -84,32 +90,11 @@ class DisplayGrid(view: MainView) : Canvas() {
 }
 
 class Cell {
-    enum class State {
-        SEARCH {
-            override fun color(): Color = Color.CYAN
-        },
-        PATH {
-            override fun color(): Color = Color.ORANGE
-        },
-        WALL {
-            override fun color(): Color = Color.BLACK
-        },
-        CLEAR {
-            override fun color(): Color = Color.WHITE
-        };
-
-        abstract fun color(): Color
-
-        companion object {
-            fun from_String(str: String): State {
-                return when (str) {
-                    "SEARCH" -> SEARCH
-                    "PATH" -> PATH
-                    "WALL" -> WALL
-                    else -> CLEAR
-                }
-            }
-        }
+    enum class State(val str: String, val color: Color) {
+        SEARCH("SEARCH", Color.CYAN),
+        PATH("PATH", Color.ORANGE),
+        WALL("WALL", Color.BLACK),
+        CLEAR("CLEAR", Color.WHITE);
     }
 
     var state = State.WALL
