@@ -6,19 +6,29 @@ import kotlinx.coroutines.launch
 import view.MainView
 import java.util.*
 
-abstract class MazeGenerator(private val mainView: MainView) {
-    protected val grid = mainView.displayGrid
-
-    companion object {
-
-        enum class GenerationType(val str: String) {
-            RandomizeDFS("Randomized Dfs")
+enum class GenerationType {
+    Dfs {
+        override fun create(mainView: MainView): MazeGenerator {
+            return RandomizeDFS(mainView)
         }
-
-        fun createGenerator(type: String) {
-            GenerationType.valueOf(type)
+    },
+    Prims {
+        override fun create(mainView: MainView): MazeGenerator {
+            return RandomizePrims(mainView)
+        }
+    },
+    Wilsons {
+        override fun create(mainView: MainView): MazeGenerator {
+            return WilsonsAlgorithm(mainView)
         }
     }
+    ;
+
+    abstract fun create(mainView: MainView): MazeGenerator
+}
+
+abstract class MazeGenerator(private val mainView: MainView) {
+    protected val grid = mainView.displayGrid
 
     protected fun neighbours(index: Int): ArrayList<Int> {
         val p = grid.indexToXY(index)
@@ -59,7 +69,6 @@ class RandomizeDFS(mainView: MainView) : MazeGenerator(mainView) {
             while (!stack.empty()) {
                 val current = stack.pop()
                 val neighbour = neighbours(current)
-
                 neighbour.removeIf { visited.contains(it) }
                 if (neighbour.isEmpty()) continue
 
@@ -76,7 +85,73 @@ class RandomizeDFS(mainView: MainView) : MazeGenerator(mainView) {
 }
 
 class RandomizePrims(mainView: MainView) : MazeGenerator(mainView) {
-    override fun generate() {
 
+    private val stack = arrayListOf(0)
+    private val visited = arrayListOf(0)
+    override fun generate() {
+        CoroutineScope(Dispatchers.IO).launch {
+            while (stack.isNotEmpty()) {
+                val current = stack.random()
+                val neighbour = neighbours(current)
+                neighbour.removeIf { visited.contains(it) }
+
+                if (neighbour.isEmpty()) {
+                    stack.remove(current)
+                    continue
+                }
+
+                val next = neighbour.random()
+                visited.add(next)
+                stack.add(next)
+
+                connect(current, next)
+            }
+        }
+    }
+}
+
+class WilsonsAlgorithm(val mainView: MainView) : MazeGenerator(mainView) {
+    private fun getUnvisited(): MutableList<Int> {
+        val sequence = mutableListOf<Int>()
+
+        repeat(mainView.rowProperty.get()) { r ->
+            repeat(mainView.colProperty.get()) { c ->
+                sequence.add(grid.xyToIndex(2 * r, 2 * c))
+            }
+        }
+
+        sequence.remove(0)
+        return sequence
+    }
+
+    override fun generate() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val unvisited = getUnvisited()
+
+            while (unvisited.isNotEmpty()) {
+                var current = unvisited.random()
+
+                val walk = arrayListOf(current)
+                while (true) {
+                    val neighbour = neighbours(current)
+                    neighbour.removeIf { walk.contains(it) }
+                    if (neighbour.isEmpty()) break
+
+                    val next = neighbour.random()
+
+                    walk.add(next)
+                    current = next
+
+                    if (unvisited.contains(next)) continue
+
+                    unvisited.removeAll(walk)
+                    walk.forEachIndexed { index, i ->
+                        if (index != 0) connect(i, walk[index - 1])
+                    }
+
+                    break
+                }
+            }
+        }
     }
 }

@@ -29,14 +29,19 @@ class DisplayGrid(view: MainView) : Canvas() {
     }
 
     override fun isResizable(): Boolean = true
-    override fun prefHeight(width: Double): Double = height
+    override fun prefHeight(height: Double): Double = height
     override fun prefWidth(width: Double): Double = width
 
     private fun toggleCell(r: Int, c: Int) {
-        val index = xyToIndex(r, c)
-        val cell = cells[index]
+        val cell = cells[xyToIndex(r, c)]
+
+        // Cannot interact with wall
+        if (cell.state == Cell.State.WALL) return
+        // Can only have up to 2 end points
+
         cell.state = if (cell.state == Cell.State.CLEAR) {
-            Cell.State.WALL
+            if (has2RedSquares()) return
+            Cell.State.END
         } else {
             Cell.State.CLEAR
         }
@@ -44,16 +49,11 @@ class DisplayGrid(view: MainView) : Canvas() {
     }
 
     fun animate(r: Int, c: Int, state: String) {
-        with(graphicsContext2D) {
-            val w = width / cols!!
-            val h = height / rows!!
-            val x = r * w + spacing
-            val y = c * h + spacing
-
-            fill = Cell.State.valueOf(state).color
-            fillRect(x, y, w - 2 * spacing, h - 2 * spacing)
-        }
+        cells[xyToIndex(r, c)].state = Cell.State.valueOf(state)
+        draw()
     }
+
+    fun has2RedSquares(): Boolean = cells.count { it.state == Cell.State.END } == 2
 
     private fun draw() {
         with(graphicsContext2D) {
@@ -72,7 +72,21 @@ class DisplayGrid(view: MainView) : Canvas() {
         }
     }
 
-    class Point(val x: Int, val y: Int)
+    data class Point(val x: Int, val y: Int)
+
+    fun getStringRepresentation(): String {
+        val list = mutableListOf<MutableList<Char>>()
+
+        repeat(rows!!) { r ->
+            val rowList = mutableListOf<Char>()
+            repeat(cols!!) { c ->
+                rowList.add(cells[xyToIndex(r, c)].state.charCode)
+            }
+            list.add(rowList)
+        }
+
+        return list.toString()
+    }
 
     fun xyToIndex(r: Int, c: Int) = r * cols!! + c
     fun indexToXY(index: Int) = Point(
@@ -90,11 +104,12 @@ class DisplayGrid(view: MainView) : Canvas() {
 }
 
 class Cell {
-    enum class State(val str: String, val color: Color) {
-        SEARCH("SEARCH", Color.CYAN),
-        PATH("PATH", Color.ORANGE),
-        WALL("WALL", Color.BLACK),
-        CLEAR("CLEAR", Color.WHITE);
+    enum class State(val color: Color, val charCode: Char) {
+        SEARCH(Color.CYAN, 's'),
+        PATH(Color.ORANGE, 'p'),
+        WALL(Color.BLACK, 'w'),
+        END(Color.RED, 'e'),
+        CLEAR(Color.WHITE, 'c');
     }
 
     var state = State.WALL

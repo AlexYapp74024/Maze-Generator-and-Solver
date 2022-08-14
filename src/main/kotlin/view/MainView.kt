@@ -1,8 +1,10 @@
 package view
 
-import app.RandomizeDFS
+import app.GenerationType
 import app.Styles
 import javafx.beans.property.SimpleIntegerProperty
+import javafx.scene.control.Alert
+import javafx.scene.control.ToggleButton
 import javafx.scene.control.ToggleGroup
 import tornadofx.*
 
@@ -11,7 +13,7 @@ class MainView : View("Hello TornadoFX") {
     val rowProperty = SimpleIntegerProperty(5)
     val colProperty = SimpleIntegerProperty(5)
     val displayGrid = DisplayGrid(this)
-    val toggleGroup = ToggleGroup()
+    private val toggleGroup = ToggleGroup()
 
     override val root = borderpane {
         center = stackpane {
@@ -33,16 +35,35 @@ class MainView : View("Hello TornadoFX") {
                 spinner(property = colProperty) { isEditable = true }
             }
 
-            hbox {
+            vbox {
                 addClass(Styles.boxSpacing)
 
-                togglebutton("randomize_dfs", toggleGroup)
+                GenerationType.values().forEach {
+                    togglebutton(it.name, toggleGroup)
+                }
             }
 
             button("Generate") {
                 action {
                     displayGrid.resize()
-                    RandomizeDFS(this@MainView).generate()
+                    GenerationType.valueOf((toggleGroup.selectedToggle as ToggleButton).text)
+                        .create(this@MainView)
+                        .generate()
+                }
+            }
+
+            button("Solve") {
+                action {
+                    if (!displayGrid.has2RedSquares()) {
+                        alert(
+                            Alert.AlertType.WARNING,
+                            "Error",
+                            "There must be exactly 2 end points (Red tiles) to solve"
+                        )
+                        return@action
+                    }
+
+                    println(displayGrid.getStringRepresentation())
                 }
             }
         }
