@@ -15,8 +15,8 @@ class DisplayGrid(view: MainView) : Canvas() {
     init {
         view.colProperty.onChange { resize() }
         view.rowProperty.onChange { resize() }
-        widthProperty().onChange { draw() }
-        heightProperty().onChange { draw() }
+        widthProperty().onChange { redraw() }
+        heightProperty().onChange { redraw() }
 
         setOnMouseClicked {
             toggleCell(
@@ -45,34 +45,53 @@ class DisplayGrid(view: MainView) : Canvas() {
         } else {
             Cell.State.CLEAR
         }
-        draw()
+        redraw()
     }
 
     fun animate(r: Int, c: Int, state: String) {
-        cells[xyToIndex(r, c)].state = Cell.State.valueOf(state)
-        draw()
+        val cell = cells[xyToIndex(c, r)]
+        if (cell.state == Cell.State.END) return
+        cell.state = Cell.State.valueOf(state)
+        drawCell(xyToIndex(c, r))
     }
 
     fun has2RedSquares(): Boolean = cells.count { it.state == Cell.State.END } == 2
 
-    private fun draw() {
+    fun endPoints(): Pair<Point, Point> {
+        val points = cells.withIndex().filter { it.value.state == Cell.State.END }.map { it.index }
+        return Pair(indexToXY(points[0]), indexToXY(points[1]))
+    }
+
+    private fun redraw() {
         with(graphicsContext2D) {
             fill = c("#555555")
             fillRect(0.0, 0.0, width, height)
 
             cells.forEachIndexed { index, cell ->
-                val w = width / cols!!
-                val h = height / rows!!
-                val x = index % cols!! * w + spacing
-                val y = index / cols!! * h + spacing
-
-                fill = cell.state.color
-                fillRect(x, y, w - 2 * spacing, h - 2 * spacing)
+                drawCell(index)
             }
         }
     }
 
-    data class Point(val x: Int, val y: Int)
+    fun cleanup() {
+        cells.forEach {
+            if (it.state != Cell.State.WALL && it.state != Cell.State.END)
+                it.state = Cell.State.CLEAR
+        }
+        redraw()
+    }
+
+    private fun drawCell(index: Int) {
+        with(graphicsContext2D) {
+            val w = width / cols!!
+            val h = height / rows!!
+            val x = index % cols!! * w + spacing
+            val y = index / cols!! * h + spacing
+
+            fill = cells[index].state.color
+            fillRect(x, y, w - 2 * spacing, h - 2 * spacing)
+        }
+    }
 
     fun getStringRepresentation(): String {
         val list = mutableListOf<MutableList<Char>>()
@@ -88,6 +107,8 @@ class DisplayGrid(view: MainView) : Canvas() {
         return list.toString()
     }
 
+    data class Point(val x: Int, val y: Int)
+
     fun xyToIndex(r: Int, c: Int) = r * cols!! + c
     fun indexToXY(index: Int) = Point(
         index / cols!!,
@@ -99,7 +120,7 @@ class DisplayGrid(view: MainView) : Canvas() {
         repeat(rows!! * cols!!) {
             cells.add(Cell())
         }
-        draw()
+        redraw()
     }
 }
 

@@ -12,8 +12,8 @@ abstract class PrologSolver {
     protected abstract var tempFile: File
     private val prolog_dir = File("src//main//prolog")
 
-    protected abstract fun defaultQuery(): Query
-    protected abstract var query: Query
+    abstract fun defaultQuery(): Query
+    abstract var query: Query
 
     init {
         Query.hasSolution(
@@ -53,6 +53,7 @@ abstract class PrologSolver {
                 } while (query.hasNext())
             }
         } else {
+            println("Not done yet")
             pausing.complete(Unit)
         }
     }
@@ -64,7 +65,7 @@ abstract class PrologSolver {
     private var animating = CompletableDeferred<Unit>()
     private var writing = false
 
-    private fun animate() {
+    private suspend fun animate() {
         val reader = BufferedReader(FileReader(tempFile))
 
         animating.complete(Unit)
@@ -81,7 +82,7 @@ abstract class PrologSolver {
         tempFile.delete()
     }
 
-    protected abstract fun parseLine(line: String)
+    protected abstract suspend fun parseLine(line: String)
 
     protected fun cancelQuery() {
         if (this::queryJob.isInitialized && queryJob.isActive)

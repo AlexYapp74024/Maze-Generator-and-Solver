@@ -6,29 +6,30 @@ import kotlinx.coroutines.launch
 import view.MainView
 import java.util.*
 
-enum class GenerationType {
-    Dfs {
-        override fun create(mainView: MainView): MazeGenerator {
-            return RandomizeDFS(mainView)
-        }
-    },
-    Prims {
-        override fun create(mainView: MainView): MazeGenerator {
-            return RandomizePrims(mainView)
-        }
-    },
-    Wilsons {
-        override fun create(mainView: MainView): MazeGenerator {
-            return WilsonsAlgorithm(mainView)
-        }
-    }
-    ;
-
-    abstract fun create(mainView: MainView): MazeGenerator
-}
 
 abstract class MazeGenerator(private val mainView: MainView) {
     protected val grid = mainView.displayGrid
+
+    enum class Type {
+        Dfs {
+            override fun create(mainView: MainView): MazeGenerator {
+                return RandomizeDFS(mainView)
+            }
+        },
+        Prims {
+            override fun create(mainView: MainView): MazeGenerator {
+                return RandomizePrims(mainView)
+            }
+        },
+        Wilsons {
+            override fun create(mainView: MainView): MazeGenerator {
+                return WilsonsAlgorithm(mainView)
+            }
+        }
+        ;
+
+        abstract fun create(mainView: MainView): MazeGenerator
+    }
 
     protected fun neighbours(index: Int): ArrayList<Int> {
         val p = grid.indexToXY(index)

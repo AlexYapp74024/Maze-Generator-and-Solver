@@ -1,6 +1,7 @@
 package view
 
-import app.GenerationType
+import app.MazeGenerator
+import app.MazeSolver
 import app.Styles
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.Alert
@@ -13,7 +14,8 @@ class MainView : View("Hello TornadoFX") {
     val rowProperty = SimpleIntegerProperty(5)
     val colProperty = SimpleIntegerProperty(5)
     val displayGrid = DisplayGrid(this)
-    private val toggleGroup = ToggleGroup()
+    private val generatorToggleGroup = ToggleGroup()
+    private val solverToggleGroup = ToggleGroup()
 
     override val root = borderpane {
         center = stackpane {
@@ -36,19 +38,37 @@ class MainView : View("Hello TornadoFX") {
             }
 
             vbox {
+                label("Generation Methods")
+
                 addClass(Styles.boxSpacing)
 
-                GenerationType.values().forEach {
-                    togglebutton(it.name, toggleGroup)
+                MazeGenerator.Type.values().forEach {
+                    togglebutton(it.name, generatorToggleGroup)
                 }
             }
 
             button("Generate") {
                 action {
                     displayGrid.resize()
-                    GenerationType.valueOf((toggleGroup.selectedToggle as ToggleButton).text)
+                    MazeGenerator.Type.valueOf((generatorToggleGroup.selectedToggle as ToggleButton).text)
                         .create(this@MainView)
                         .generate()
+                }
+            }
+
+            hbox {
+                region {
+                    prefHeight = 20.0
+                }
+            }
+
+            vbox {
+                label("Solving Algorithms")
+
+                addClass(Styles.boxSpacing)
+
+                MazeSolver.Type.values().forEach {
+                    togglebutton(it.name, solverToggleGroup)
                 }
             }
 
@@ -63,7 +83,12 @@ class MainView : View("Hello TornadoFX") {
                         return@action
                     }
 
-                    println(displayGrid.getStringRepresentation())
+                    displayGrid.cleanup()
+
+                    MazeSolver(
+                        displayGrid,
+                        MazeSolver.Type.valueOf((solverToggleGroup.selectedToggle as ToggleButton).text)
+                    ).solve()
                 }
             }
         }
